@@ -18,9 +18,13 @@ SCOPES = [
 @st.cache_resource(show_spinner="Menghubungkan ke Google Sheet...")
 def connect_to_sheets():
     try:
-        credentials = Credentials.from_service_account_file(
-            "credentials.json", scopes=SCOPES
-        )
+        if "google_service_account" in st.secrets:
+            import json
+            cred_dict = json.loads(st.secrets["google_service_account"]["credentials"])
+            credentials = Credentials.from_service_account_info(cred_dict, scopes=SCOPES)
+        else:
+            credentials = Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
+        
         gc = gspread.authorize(credentials)
         sht = gc.open_by_url(SPREADSHEET_URL)
         worksheet = sht.sheet1
