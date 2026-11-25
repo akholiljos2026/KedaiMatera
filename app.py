@@ -15,13 +15,13 @@ SCOPES = [
 ]
 
 # ---------------------- FUNGSI KONEKSI ----------------------
+# ---------------------- FUNGSI KONEKSI ----------------------
 @st.cache_resource(show_spinner="Menghubungkan ke Google Sheet...")
 def connect_to_sheets():
     try:
         # Cek apakah berjalan di Streamlit Cloud
         if "private_key" in st.secrets:
             # Bangun kredensial dari Secrets
-            from google.oauth2.service_account import Credentials
             credentials_dict = {
                 "type": st.secrets["type"],
                 "project_id": st.secrets["project_id"],
