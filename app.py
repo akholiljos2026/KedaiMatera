@@ -229,7 +229,7 @@ with tab2:
         st.markdown(f"### 📋 Daftar Transaksi — {len(df_filtered)} data ditemukan")
         
         tampil_kolom = ["tanggal", "in_out", "type_cost", "wbs_cost", "uraian", "rupiah", "keterangan"]
-        st.dataframe(df_filtered[tampil_kolom], use_container_width=True, hide_index=True)
+        st.dataframe(df_filtered[tampil_kolom], width="stretch", hide_index=True)
         
         # ---------------- GRAFIK ----------------
         st.markdown("---")
@@ -241,7 +241,7 @@ with tab2:
             st.subheader("Berdasarkan Jenis Biaya")
             df_chart1 = df_filtered.groupby("type_cost")["rupiah"].sum().reset_index()
             if not df_chart1.empty:
-                st.bar_chart(df_chart1, x="type_cost", y="rupiah", use_container_width=True)
+                st.bar_chart(df_chart1, x="type_cost", y="rupiah", width="stretch")
             else:
                 st.info("Tidak ada data")
         
@@ -249,7 +249,7 @@ with tab2:
             st.subheader("Berdasarkan Kategori")
             df_chart2 = df_filtered.groupby("wbs_cost")["rupiah"].sum().reset_index()
             if not df_chart2.empty:
-                st.bar_chart(df_chart2, x="wbs_cost", y="rupiah", color="#e74c3c", use_container_width=True)
+                st.bar_chart(df_chart2, x="wbs_cost", y="rupiah", color="#e74c3c", width="stretch")
             else:
                 st.info("Tidak ada data")
 
