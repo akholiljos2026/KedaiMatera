@@ -267,24 +267,48 @@ with tab2:
         
         # ---------------- TABEL DATA ----------------
 
-
-        # Ambil data dari Google Sheet
+        # Ambil semua data dari Google Sheet
         data = worksheet.get_all_records()
         df = pd.DataFrame(data)
 
-        # 1. Format kolom rupiah
-        df['rupiah'] = df['rupiah'].apply(lambda x: f"{x:,.0f}" if pd.notna(x) and x != "" else "")
+        # ---------- TERAPKAN FILTER DISINI ----------
+        # Salin dulu ke df_filtered
+        df_filtered = df.copy()
 
-        # 2. Tambahkan kolom nomor urut mulai dari 1
-        df.insert(0, 'No', range(1, len(df) + 1))
+        # Filter berdasarkan Jenis Transaksi
+        if filter_transaksi != "Semua":
+            df_filtered = df_filtered[df_filtered['in_out'] == filter_transaksi]
 
-        # 3. Tentukan kolom yang akan ditampilkan
+        # Filter berdasarkan Tanggal Mulai & Tanggal Akhir
+        # Pastikan kolom tanggal berformat datetime
+        df_filtered['tanggal'] = pd.to_datetime(df_filtered['tanggal']).dt.date
+        df_filtered = df_filtered[
+            (df_filtered['tanggal'] >= tgl_mulai) & 
+            (df_filtered['tanggal'] <= tgl_akhir)
+]
+
+        # Filter Jenis Biaya
+        if filter_biaya != "Semua":
+            df_filtered = df_filtered[df_filtered['type_cost'] == filter_biaya]
+
+        # Filter Kategori
+        if filter_kategori != "Semua":
+            df_filtered = df_filtered[df_filtered['wbs_cost'] == filter_kategori]
+        # -------------------------------------------
+
+        # Format kolom rupiah — lakukan SETELAH difilter
+        df_filtered['rupiah'] = df_filtered['rupiah'].apply(lambda x: f"{x:,.0f}" if pd.notna(x) and x != "" else "")
+
+        # Tambahkan kolom nomor urut — lakukan SETELAH difilter
+        df_filtered.insert(0, 'No', range(1, len(df_filtered) + 1))
+
+        # Tentukan kolom yang ditampilkan
         tampil_kolom = ['No', 'tanggal', 'in_out', 'type_cost', 'wbs_cost', 'uraian', 'rupiah', 'keterangan']
 
-        # 4. Tampilkan tabel
+        # Tampilkan hasil
         st.subheader("📋 Daftar Transaksi")
-        st.info(f"{len(df)} data ditemukan")
-        st.dataframe(df[tampil_kolom], use_container_width=True, hide_index=True)
+        st.info(f"{len(df_filtered)} data ditemukan")
+        st.dataframe(df_filtered[tampil_kolom], use_container_width=True, hide_index=True)
               
         # ---------------- GRAFIK ----------------
         st.markdown("---")
