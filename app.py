@@ -24,15 +24,11 @@ def connect_to_sheets():
 
         # 🔹 CARA 1: Baca dari file lokal (untuk komputer)
         try:
-            #----- st.info("🔄 Membaca credentials.json...")
             with open("credentials.json", "r", encoding="utf-8") as f:
                 credentials_dict = json.load(f)
             credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
-          ###----  st.success("✅ Berhasil terhubung dari credentials.json!")
 
         except FileNotFoundError:
-            ### st.info("ℹ️ File credentials.json tidak ditemukan — mencoba dari Streamlit Secrets...")
-
             # 🔹 CARA 2: Baca dari Streamlit Secrets
             if "credentials" not in st.secrets:
                 st.error("❌ Tidak menemukan 'credentials' di Secrets!")
@@ -40,23 +36,15 @@ def connect_to_sheets():
                 st.code('credentials = """\n{ SALIN ISI credentials.json }\n"""')
                 return None
 
-            # Ambil teks JSON dari secrets dan bersihkan karakter tersembunyi
             json_text = st.secrets["credentials"]
-            
-            # Bersihkan karakter kontrol yang tidak valid
             json_text = re.sub(r'[\x00-\x1f]+', ' ', json_text)
-            
-            # Parse JSON
             credentials_dict = json.loads(json_text)
             
-            # Pastikan format private_key benar
             if "private_key" in credentials_dict:
                 credentials_dict["private_key"] = credentials_dict["private_key"].replace("\\n", "\n")
             
             credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
-            #---- st.success("✅ Berhasil terhubung dari Streamlit Secrets!")
 
-        # Terhubung ke Google Sheet
         gc = gspread.authorize(credentials)
         sht = gc.open_by_url(SPREADSHEET_URL)
         worksheet = sht.sheet1
@@ -79,6 +67,8 @@ def load_transactions(worksheet):
         df = pd.DataFrame(data)
         if "rupiah" in df.columns:
             df["rupiah"] = pd.to_numeric(df["rupiah"], errors="coerce")
+        if "tanggal" in df.columns:
+            df["tanggal"] = pd.to_datetime(df["tanggal"], errors="coerce")
         return df
     except Exception as e:
         return pd.DataFrame(columns=["tanggal", "in_out", "type_cost", "wbs_cost", "uraian", "rupiah", "keterangan"])
@@ -97,18 +87,14 @@ def save_transaction(worksheet, tanggal, in_out, type_cost, wbs_cost, uraian, ru
 
 # ---------------------- FUNGSI: TAMPILKAN LOGO POJOK KANAN ATAS ----------------------
 def add_logo_to_header(logo_path, width_scale=2.0):
-    """Menampilkan logo di pojok kanan atas halaman"""
     try:
         logo = Image.open(logo_path)
-        # Konversi ke base64 untuk tampil di HTML
         buffered = BytesIO()
         logo.save(buffered, format="PNG")
         img_str = base64.b64encode(buffered.getvalue()).decode()
         
-        # Hitung lebar logo — sekitar 2x ukuran ikon teks
-        logo_width_px = int(40 * width_scale)  # 24px = kira-kira ukuran ikon emoji
+        logo_width_px = int(40 * width_scale)
         
-        # Tampilkan logo di kanan atas menggunakan CSS
         st.markdown(f"""
             <style>
                 .header-container {{
@@ -129,19 +115,12 @@ def add_logo_to_header(logo_path, width_scale=2.0):
             <hr>
         """, unsafe_allow_html=True)
     except FileNotFoundError:
-        # Jika file logo tidak ditemukan, tampilkan judul biasa
         st.title("📒 Jurnal Kas — Usaha Mitra Matera")
         st.markdown("---")
-        st.warning("⚠️ File `logo.png` tidak ditemukan di folder proyek — logo tidak ditampilkan")
-
-# ---- Ubah format kolom rupiah menjadi angka dengan pemisah ribuan
-def format_rupiah(angka):
-    return f"{angka:,.0f}"
 
 # ---------------------- HALAMAN UTAMA ----------------------
 st.set_page_config(page_title="Mitra Matera - Jurnal Kas", page_icon="💰", layout="wide")
 
-# Tampilkan Judul + Logo
 add_logo_to_header("logo.png", width_scale=2.0)
 
 worksheet = connect_to_sheets()
@@ -199,19 +178,18 @@ with tab2:
     if df.empty:
         st.info("📭 Belum ada data transaksi. Silakan catat transaksi pertama Anda di tab 'Catat Transaksi'!")
     else:
-        # ---------------- FILTER ----------------
+        # ---------------- FILTER DATA ----------------
         st.markdown("### 🔍 Filter Data")
         
         col_f1, col_f2, col_f3, col_f4 = st.columns(4)
         
-        # Filter In/Out
+        # Filter Jenis Transaksi
         with col_f1:
             filter_inout = st.selectbox("Transaksi", ["Semua", "MASUK", "KELUAR"])
         
         # Filter Tanggal
         with col_f2:
             if "tanggal" in df.columns and not df["tanggal"].isna().all():
-                df["tanggal"] = pd.to_datetime(df["tanggal"], errors="coerce")
                 min_tgl = df["tanggal"].min().date()
                 max_tgl = df["tanggal"].max().date()
                 tgl_mulai = st.date_input("Tanggal Mulai", value=min_tgl, min_value=min_tgl, max_value=max_tgl)
@@ -220,33 +198,35 @@ with tab2:
                 tgl_mulai = st.date_input("Tanggal Mulai", value=datetime.today())
                 tgl_akhir = st.date_input("Tanggal Akhir", value=datetime.today())
         
-        # Filter type_cost
+        # Filter Jenis Biaya
         with col_f3:
             daftar_type = ["Semua"] + sorted(df["type_cost"].dropna().unique().tolist())
             filter_type = st.selectbox("Jenis Biaya", daftar_type)
         
-        # Filter wbs_cost
+        # Filter Kategori
         with col_f4:
             daftar_wbs = ["Semua"] + sorted(df["wbs_cost"].dropna().unique().tolist())
             filter_wbs = st.selectbox("Kategori", daftar_wbs)
         
-        # Terapkan Filter
+        # ---------------- TERAPKAN FILTER ----------------
         df_filtered = df.copy()
         
+        # Filter Transaksi Masuk/Keluar
         if filter_inout != "Semua":
             df_filtered = df_filtered[df_filtered["in_out"] == filter_inout]
         
-        if "tanggal" in df.columns:
-            tgl_mulai_str = tgl_mulai.strftime("%Y-%m-%d")
-            tgl_akhir_str = tgl_akhir.strftime("%Y-%m-%d")
-            df_filtered = df_filtered[
-                (df_filtered["tanggal"] >= tgl_mulai_str) & 
-                (df_filtered["tanggal"] <= tgl_akhir_str)
-            ]
+        # Filter Tanggal
+        df_filtered['tanggal'] = pd.to_datetime(df_filtered['tanggal']).dt.date
+        df_filtered = df_filtered[
+            (df_filtered['tanggal'] >= tgl_mulai) & 
+            (df_filtered['tanggal'] <= tgl_akhir)
+        ]
         
+        # Filter Jenis Biaya
         if filter_type != "Semua":
             df_filtered = df_filtered[df_filtered["type_cost"] == filter_type]
         
+        # Filter Kategori
         if filter_wbs != "Semua":
             df_filtered = df_filtered[df_filtered["wbs_cost"] == filter_wbs]
         
@@ -266,50 +246,24 @@ with tab2:
                   delta_color="normal" if saldo >=0 else "inverse")
         
         # ---------------- TABEL DATA ----------------
-
-        # Ambil semua data dari Google Sheet
-        data = worksheet.get_all_records()
-        df = pd.DataFrame(data)
-
-        # ---------- TERAPKAN FILTER DISINI ----------
-        # Salin dulu ke df_filtered
-        df_filtered = df.copy()
-
-        # Filter berdasarkan Jenis Transaksi
-        if filter_transaksi != "Semua":
-            df_filtered = df_filtered[df_filtered['in_out'] == filter_transaksi]
-
-        # Filter berdasarkan Tanggal Mulai & Tanggal Akhir
-        # Pastikan kolom tanggal berformat datetime
-        df_filtered['tanggal'] = pd.to_datetime(df_filtered['tanggal']).dt.date
-        df_filtered = df_filtered[
-            (df_filtered['tanggal'] >= tgl_mulai) & 
-            (df_filtered['tanggal'] <= tgl_akhir)
-]
-
-        # Filter Jenis Biaya
-        if filter_biaya != "Semua":
-            df_filtered = df_filtered[df_filtered['type_cost'] == filter_biaya]
-
-        # Filter Kategori
-        if filter_kategori != "Semua":
-            df_filtered = df_filtered[df_filtered['wbs_cost'] == filter_kategori]
-        # -------------------------------------------
-
-        # Format kolom rupiah — lakukan SETELAH difilter
-        df_filtered['rupiah'] = df_filtered['rupiah'].apply(lambda x: f"{x:,.0f}" if pd.notna(x) and x != "" else "")
-
-        # Tambahkan kolom nomor urut — lakukan SETELAH difilter
-        df_filtered.insert(0, 'No', range(1, len(df_filtered) + 1))
-
-        # Tentukan kolom yang ditampilkan
-        tampil_kolom = ['No', 'tanggal', 'in_out', 'type_cost', 'wbs_cost', 'uraian', 'rupiah', 'keterangan']
-
-        # Tampilkan hasil
-        st.subheader("📋 Daftar Transaksi")
-        st.info(f"{len(df_filtered)} data ditemukan")
-        st.dataframe(df_filtered[tampil_kolom], use_container_width=True, hide_index=True)
-              
+        st.markdown("---")
+        st.markdown(f"### 📋 Daftar Transaksi — {len(df_filtered)} data ditemukan")
+        
+        if not df_filtered.empty:
+            # Format kolom rupiah
+            df_filtered['rupiah'] = df_filtered['rupiah'].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else "")
+            
+            # Tambahkan nomor urut mulai dari 1
+            df_filtered.insert(0, 'No', range(1, len(df_filtered) + 1))
+            
+            # Pilih kolom yang ditampilkan
+            tampil_kolom = ['No', 'tanggal', 'in_out', 'type_cost', 'wbs_cost', 'uraian', 'rupiah', 'keterangan']
+            
+            # Tampilkan tabel
+            st.dataframe(df_filtered[tampil_kolom], use_container_width=True, hide_index=True)
+        else:
+            st.info("📭 Tidak ada data yang sesuai dengan kriteria filter")
+        
         # ---------------- GRAFIK ----------------
         st.markdown("---")
         st.markdown("### 📊 Grafik")
@@ -320,7 +274,7 @@ with tab2:
             st.subheader("Berdasarkan Jenis Biaya")
             df_chart1 = df_filtered.groupby("type_cost")["rupiah"].sum().reset_index()
             if not df_chart1.empty:
-                st.bar_chart(df_chart1, x="type_cost", y="rupiah", width="stretch")
+                st.bar_chart(df_chart1, x="type_cost", y="rupiah", use_container_width=True)
             else:
                 st.info("Tidak ada data")
         
@@ -328,7 +282,7 @@ with tab2:
             st.subheader("Berdasarkan Kategori")
             df_chart2 = df_filtered.groupby("wbs_cost")["rupiah"].sum().reset_index()
             if not df_chart2.empty:
-                st.bar_chart(df_chart2, x="wbs_cost", y="rupiah", color="#e74c3c", width="stretch")
+                st.bar_chart(df_chart2, x="wbs_cost", y="rupiah", color="#e74c3c", use_container_width=True)
             else:
                 st.info("Tidak ada data")
 
