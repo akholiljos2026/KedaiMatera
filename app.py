@@ -266,16 +266,34 @@ with tab2:
                   delta_color="normal" if saldo >=0 else "inverse")
         
         # ---------------- TABEL DATA ----------------
-        st.markdown("---")
-        st.markdown(f"### 📋 Daftar Transaksi — {len(df_filtered)} data ditemukan")
+
+        # Ambil data dari Google Sheet
+data = worksheet.get_all_records()
+df = pd.DataFrame(data)
+
+# 1. Format kolom rupiah
+df['rupiah'] = df['rupiah'].apply(lambda x: f"{x:,.0f}" if pd.notna(x) and x != "" else "")
+
+# 2. Tambahkan kolom nomor urut mulai dari 1
+df.insert(0, 'No', range(1, len(df) + 1))
+
+# 3. Tampilkan tabel — sembunyikan indeks bawaan
+st.subheader("📋 Daftar Transaksi")
+st.info(f"{len(df)} data ditemukan")
+st.dataframe(df, use_container_width=True, hide_index=True)
+
+####        st.markdown("---")
+####        st.markdown(f"### 📋 Daftar Transaksi — {len(df_filtered)} data ditemukan")
         
-        tampil_kolom = ["tanggal", "in_out", "type_cost", "wbs_cost", "uraian", "rupiah", "keterangan"]
-        ##---- st.dataframe(df_filtered[tampil_kolom], width="stretch", hide_index=True) ========
+####        tampil_kolom = ["tanggal", "in_out", "type_cost", "wbs_cost", "uraian", "rupiah", "keterangan"]
         
-        df_styled = df.style.format({
-            "rupiah": "{:,.0f}"
-        })
-        st.dataframe(df_styled, use_container_width=True)
+####        ##---- st.dataframe(df_filtered[tampil_kolom], width="stretch", hide_index=True) ========
+####        ## diganti rupiah ditempilkan dengan pecahan ribuan ======
+        
+####        df_styled = df.style.format({
+####            "rupiah": "{:,.0f}"
+####        })
+####        st.dataframe(df_styled, use_container_width=True)
         
         # ---------------- GRAFIK ----------------
         st.markdown("---")
