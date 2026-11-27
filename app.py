@@ -6,7 +6,6 @@ from datetime import datetime
 from PIL import Image
 import base64
 from io import BytesIO
-import json
 
 # ---------------------- KONFIGURASI ----------------------
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1dvBa8cxSOsagz_nLJl8qp1rGO7mPHg1_Sn22HXwa2xE/edit?usp=sharing"
@@ -15,52 +14,38 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-
 # ---------------------- FUNGSI KONEKSI ----------------------
 @st.cache_resource(show_spinner="Menghubungkan ke Google Sheet...")
 def connect_to_sheets():
     try:
-        # Cek apakah berjalan di Streamlit Cloud dengan Secrets
-        if hasattr(st, "secrets") and "type" in st.secrets:
-            st.info("🔄 Menggunakan kredensial dari Streamlit Secrets")
-            credentials_dict = dict(st.secrets)
-            # Pastikan format private_key benar
-            if "private_key" in credentials_dict:
-                credentials_dict["private_key"] = credentials_dict["private_key"].replace("\\n", "\n")
+        # ✅ Prioritas 1: Cari file credentials.json di folder yang sama
+        try:
+            import json
+            st.info("🔄 Membaca credentials.json...")
+            with open("credentials.json", "r", encoding="utf-8") as f:
+                credentials_dict = json.load(f)
             credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
-        
-        else:
-            # Baca dari file lokal untuk pengembangan
-            try:
-                st.info("🔄 Membaca kredensial dari file credentials.json...")
-                with open("credentials.json", "r", encoding="utf-8") as f:
-                    credentials_dict = json.load(f)
+            st.success("✅ Berhasil dari credentials.json!")
+            
+        except FileNotFoundError:
+            # ✅ Prioritas 2: Cek di Streamlit Secrets
+            st.info("🔄 Mencari di Streamlit Secrets...")
+            if "type" in st.secrets:
+                credentials_dict = dict(st.secrets)
+                if "private_key" in credentials_dict:
+                    credentials_dict["private_key"] = credentials_dict["private_key"].replace("\\n", "\n")
                 credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
-            except FileNotFoundError:
-                st.error("""
-                ❌ **File credentials.json TIDAK DITEMUKAN!**
-                
-                Saat menjalankan di komputer lokal:
-                - Pastikan file `credentials.json` ada di folder yang sama dengan program
-                - Nama file harus persis: `credentials.json`
-                
-                Saat menjalankan di Streamlit Cloud:
-                - Buka Settings → Secrets
-                - Salin SEMUA isi file credentials.json ke kolom secrets
-                """)
+            else:
+                st.error("❌ Tidak menemukan kredensial!")
                 return None
         
         gc = gspread.authorize(credentials)
         sht = gc.open_by_url(SPREADSHEET_URL)
         worksheet = sht.sheet1
-        st.success("✅ Berhasil terhubung ke Google Sheet!")
         return worksheet
         
     except Exception as e:
-        st.error(f"❌ Gagal terhubung ke Google Sheet: {str(e)}")
-        st.info("💡 Pastikan:")
-        st.info("1. Service Account memiliki akses edit ke Google Sheet Anda")
-        st.info("2. URL Spreadsheet sudah benar")
+        st.error(f"❌ Gagal terhubung: {e}")
         return None
 
 
