@@ -28,19 +28,13 @@ def connect_to_sheets():
             st.success("✅ Berhasil dari credentials.json!")
             
         except FileNotFoundError:
-            # Di Streamlit Cloud — baca Secrets sebagai JSON
+            import json
             st.info("🔄 Membaca dari Streamlit Secrets...")
-            
-            # Coba ambil semua data dari secrets
-            credentials_dict = {k: v for k, v in st.secrets.items()}
-            
-            # Pastikan private_key mengubah \\n menjadi \n yang sebenarnya
-            if "private_key" in credentials_dict:
-                credentials_dict["private_key"] = credentials_dict["private_key"].replace("\\n", "\n")
-            
+            credentials_dict = json.loads(st.secrets["credentials_json"])
             credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
             st.success("✅ Berhasil dari Streamlit Secrets!")
-        
+
+               
         gc = gspread.authorize(credentials)
         sht = gc.open_by_url(SPREADSHEET_URL)
         worksheet = sht.sheet1
