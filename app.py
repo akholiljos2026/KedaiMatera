@@ -267,6 +267,7 @@ with tab2:
         
         # ---------------- TABEL DATA ----------------
 
+
         # Ambil data dari Google Sheet
         data = worksheet.get_all_records()
         df = pd.DataFrame(data)
@@ -277,11 +278,14 @@ with tab2:
         # 2. Tambahkan kolom nomor urut mulai dari 1
         df.insert(0, 'No', range(1, len(df) + 1))
 
-        # 3. Tampilkan tabel — sembunyikan indeks bawaan
+        # 3. Tentukan kolom yang akan ditampilkan
+        tampil_kolom = ['No', 'tanggal', 'in_out', 'type_cost', 'wbs_cost', 'uraian', 'rupiah', 'keterangan']
+
+        # 4. Tampilkan tabel
         st.subheader("📋 Daftar Transaksi")
-        st.info(f"{len(df_filtered)} data ditemukan")
-        st.dataframe(df_filtered[tampil_kolom], use_container_width=True, hide_index=True)
-        
+        st.info(f"{len(df)} data ditemukan")
+        st.dataframe(df[tampil_kolom], use_container_width=True, hide_index=True)
+              
         # ---------------- GRAFIK ----------------
         st.markdown("---")
         st.markdown("### 📊 Grafik")
