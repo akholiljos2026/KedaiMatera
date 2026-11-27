@@ -20,42 +20,46 @@ def connect_to_sheets():
     try:
         credentials = None
 
-        # 🔹 Coba 1: Baca dari file lokal (untuk pengembangan di komputer)
+        # Coba dari file lokal dulu
         try:
             import json
             st.info("🔄 Membaca credentials.json...")
             with open("credentials.json", "r", encoding="utf-8") as f:
                 credentials_dict = json.load(f)
             credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
-            st.success("✅ Berhasil terhubung dari credentials.json!")
+            st.success("✅ Berhasil dari credentials.json!")
         except FileNotFoundError:
-            st.info("ℹ️ File credentials.json tidak ditemukan — mencoba dari Streamlit Secrets...")
+            st.info("ℹ️ Tidak ditemukan — mencoba dari Streamlit Secrets...")
 
-        # 🔹 Coba 2: Baca dari Streamlit Secrets
+        # Dari Streamlit Secrets
         if credentials is None:
             st.info("🔄 Membaca dari Streamlit Secrets...")
-            
-            # Ambil semua nilai dari secrets dan ubah ke dict
             credentials_dict = dict(st.secrets)
             
-            # Ubah karakter \n di private_key menjadi ganti baris asli
+            # ⚠️ PENTING: Ubah \\n menjadi \n agar kunci terbaca
             if "private_key" in credentials_dict:
                 credentials_dict["private_key"] = credentials_dict["private_key"].replace("\\n", "\n")
             
+            # Cek semua kunci wajib
+            required_fields = ["type", "project_id", "private_key_id", "private_key", 
+                              "client_email", "client_id", "auth_uri", "token_uri",
+                              "auth_provider_x509_cert_url", "client_x509_cert_url"]
+            missing = [f for f in required_fields if f not in credentials_dict]
+            if missing:
+                st.error(f"❌ Kolom belum lengkap: {', '.join(missing)}")
+                return None
+            
             credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
-            st.success("✅ Berhasil terhubung dari Streamlit Secrets!")
+            st.success("✅ Berhasil dari Streamlit Secrets!")
 
-        # 🔹 Terhubung ke Google Sheet
         gc = gspread.authorize(credentials)
         sht = gc.open_by_url(SPREADSHEET_URL)
         worksheet = sht.sheet1
         return worksheet
 
     except Exception as e:
-        st.error(f"❌ Gagal terhubung ke Google Sheet: {str(e)}")
+        st.error(f"❌ Gagal terhubung: {str(e)}")
         return None
-
-
 
 # ---------------------- FUNGSI DATA ----------------------
 def load_transactions(worksheet):
