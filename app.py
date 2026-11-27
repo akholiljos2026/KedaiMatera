@@ -268,19 +268,19 @@ with tab2:
         # ---------------- TABEL DATA ----------------
 
         # Ambil data dari Google Sheet
-data = worksheet.get_all_records()
-df = pd.DataFrame(data)
+        data = worksheet.get_all_records()
+        df = pd.DataFrame(data)
 
-# 1. Format kolom rupiah
-df['rupiah'] = df['rupiah'].apply(lambda x: f"{x:,.0f}" if pd.notna(x) and x != "" else "")
+        # 1. Format kolom rupiah
+        df['rupiah'] = df['rupiah'].apply(lambda x: f"{x:,.0f}" if pd.notna(x) and x != "" else "")
 
-# 2. Tambahkan kolom nomor urut mulai dari 1
-df.insert(0, 'No', range(1, len(df) + 1))
+        # 2. Tambahkan kolom nomor urut mulai dari 1
+        df.insert(0, 'No', range(1, len(df) + 1))
 
-# 3. Tampilkan tabel — sembunyikan indeks bawaan
-st.subheader("📋 Daftar Transaksi")
-st.info(f"{len(df)} data ditemukan")
-st.dataframe(df, use_container_width=True, hide_index=True)
+        # 3. Tampilkan tabel — sembunyikan indeks bawaan
+        st.subheader("📋 Daftar Transaksi")
+        st.info(f"{len(df)} data ditemukan")
+        st.dataframe(df, use_container_width=True, hide_index=True)
 
 ####        st.markdown("---")
 ####        st.markdown(f"### 📋 Daftar Transaksi — {len(df_filtered)} data ditemukan")
