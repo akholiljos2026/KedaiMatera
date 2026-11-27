@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import gspread
+import json
+import re
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 from PIL import Image
@@ -18,66 +20,55 @@ SCOPES = [
 @st.cache_resource(show_spinner="Menghubungkan ke Google Sheet...")
 def connect_to_sheets():
     try:
-        import json
         credentials = None
 
-        # Coba dari file lokal dulu
+        # 🔹 CARA 1: Baca dari file lokal (untuk komputer)
         try:
             st.info("🔄 Membaca credentials.json...")
             with open("credentials.json", "r", encoding="utf-8") as f:
                 credentials_dict = json.load(f)
             credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
-            st.success("✅ Berhasil dari credentials.json!")
-        except FileNotFoundError:
-            st.info("ℹ️ Tidak ditemukan — mencoba dari Streamlit Secrets...")
+            st.success("✅ Berhasil terhubung dari credentials.json!")
 
-        # Dari Streamlit Secrets — baca sebagai JSON string
-        if credentials is None:
-            st.info("🔄 Membaca dari Streamlit Secrets...")
+        except FileNotFoundError:
+            st.info("ℹ️ File credentials.json tidak ditemukan — mencoba dari Streamlit Secrets...")
+
+            # 🔹 CARA 2: Baca dari Streamlit Secrets
+            if "credentials" not in st.secrets:
+                st.error("❌ Tidak menemukan 'credentials' di Secrets!")
+                st.info("💡 Di halaman Secrets, tulis persis:")
+                st.code('credentials = """\n{ SALIN ISI credentials.json }\n"""')
+                return None
+
+            # Ambil teks JSON dari secrets dan bersihkan karakter tersembunyi
+            json_text = st.secrets["credentials"]
             
-            # Gabungkan semua isi secrets jadi satu teks lalu parse
-            # Coba cari apakah ada kunci yang berisi JSON lengkap
-            json_text = None
+            # Bersihkan karakter kontrol yang tidak valid
+            json_text = re.sub(r'[\x00-\x1f]+', ' ', json_text)
             
-            # Coba baca seluruh secrets sebagai satu teks gabungan
-            all_items = list(st.secrets.items())
-            if len(all_items) == 1 and all_items[0][0] == "":
-                json_text = all_items[0][1]
-            else:
-                # Gabungkan semua pasangan jadi format JSON
-                import re
-                items_text = []
-                for k, v in st.secrets.items():
-                    val = v.replace('"', '\\"') if isinstance(v, str) else v
-                    items_text.append(f'"{k}": "{val}"')
-                json_text = "{" + ", ".join(items_text) + "}"
-            
-            # Bersihkan dan parse JSON
-            json_text = re.sub(r'\\n', '\n', json_text)
+            # Parse JSON
             credentials_dict = json.loads(json_text)
             
-            # Cek kolom wajib
-            required = ["type", "project_id", "private_key_id", "private_key", 
-                       "client_email", "client_id", "auth_uri", "token_uri",
-                       "auth_provider_x509_cert_url", "client_x509_cert_url"]
-            missing = [f for f in required if f not in credentials_dict]
-            if missing:
-                st.error(f"❌ Kolom belum lengkap: {', '.join(missing)}")
-                st.info("💡 Pastikan SEMUA baris dari credentials.json sudah disalin ke Secrets")
-                return None
+            # Pastikan format private_key benar
+            if "private_key" in credentials_dict:
+                credentials_dict["private_key"] = credentials_dict["private_key"].replace("\\n", "\n")
             
             credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
-            st.success("✅ Berhasil dari Streamlit Secrets!")
+            st.success("✅ Berhasil terhubung dari Streamlit Secrets!")
 
+        # Terhubung ke Google Sheet
         gc = gspread.authorize(credentials)
         sht = gc.open_by_url(SPREADSHEET_URL)
         worksheet = sht.sheet1
         return worksheet
 
+    except json.JSONDecodeError as e:
+        st.error(f"❌ Format JSON salah: {e}")
+        st.info("💡 Pastikan isi credentials.json utuh dan tidak ada tanda kutip yang terlewat")
+        return None
     except Exception as e:
         st.error(f"❌ Gagal terhubung: {str(e)}")
         return None
-
 
 # ---------------------- FUNGSI DATA ----------------------
 def load_transactions(worksheet):
