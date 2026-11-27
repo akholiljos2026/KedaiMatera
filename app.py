@@ -18,7 +18,7 @@ SCOPES = [
 @st.cache_resource(show_spinner="Menghubungkan ke Google Sheet...")
 def connect_to_sheets():
     try:
-        # ✅ Prioritas 1: Cari file credentials.json di folder yang sama
+        # Coba dari file lokal dulu
         try:
             import json
             st.info("🔄 Membaca credentials.json...")
@@ -28,16 +28,27 @@ def connect_to_sheets():
             st.success("✅ Berhasil dari credentials.json!")
             
         except FileNotFoundError:
-            # ✅ Prioritas 2: Cek di Streamlit Secrets
+            # Cek berbagai format Secrets
             st.info("🔄 Mencari di Streamlit Secrets...")
-            if "type" in st.secrets:
+            
+            # Format 1: kunci langsung di root
+            if "type" in st.secrets and st.secrets["type"] == "service_account":
                 credentials_dict = dict(st.secrets)
-                if "private_key" in credentials_dict:
-                    credentials_dict["private_key"] = credentials_dict["private_key"].replace("\\n", "\n")
-                credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
+            
+            # Format 2: di dalam google_service_account -> credentials (JSON string)
+            elif "google_service_account" in st.secrets and "credentials" in st.secrets["google_service_account"]:
+                import json
+                credentials_dict = json.loads(st.secrets["google_service_account"]["credentials"])
+            
             else:
                 st.error("❌ Tidak menemukan kredensial!")
                 return None
+            
+            # Perbaiki format private_key
+            if "private_key" in credentials_dict:
+                credentials_dict["private_key"] = credentials_dict["private_key"].replace("\\n", "\n")
+            
+            credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
         
         gc = gspread.authorize(credentials)
         sht = gc.open_by_url(SPREADSHEET_URL)
