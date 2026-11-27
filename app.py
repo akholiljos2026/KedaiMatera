@@ -6,6 +6,7 @@ from datetime import datetime
 from PIL import Image
 import base64
 from io import BytesIO
+import json
 
 # ---------------------- KONFIGURASI ----------------------
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1dvBa8cxSOsagz_nLJl8qp1rGO7mPHg1_Sn22HXwa2xE/edit?usp=sharing"
@@ -14,38 +15,52 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-# ---------------------- FUNGSI KONEKSI ----------------------
+
 # ---------------------- FUNGSI KONEKSI ----------------------
 @st.cache_resource(show_spinner="Menghubungkan ke Google Sheet...")
 def connect_to_sheets():
     try:
-        # Cek apakah berjalan di Streamlit Cloud
-        if "private_key" in st.secrets:
-            # Bangun kredensial dari Secrets
-            credentials_dict = {
-                "type": st.secrets["type"],
-                "project_id": st.secrets["project_id"],
-                "private_key_id": st.secrets["private_key_id"],
-                "private_key": st.secrets["private_key"].replace("\\n", "\n"),
-                "client_email": st.secrets["client_email"],
-                "client_id": st.secrets["client_id"],
-                "auth_uri": st.secrets["auth_uri"],
-                "token_uri": st.secrets["token_uri"],
-                "auth_provider_x509_cert_url": st.secrets["auth_provider_x509_cert_url"],
-                "client_x509_cert_url": st.secrets["client_x509_cert_url"],
-                "universe_domain": st.secrets["universe_domain"]
-            }
+        # Cek apakah berjalan di Streamlit Cloud dengan Secrets
+        if hasattr(st, "secrets") and "type" in st.secrets:
+            st.info("🔄 Menggunakan kredensial dari Streamlit Secrets")
+            credentials_dict = dict(st.secrets)
+            # Pastikan format private_key benar
+            if "private_key" in credentials_dict:
+                credentials_dict["private_key"] = credentials_dict["private_key"].replace("\\n", "\n")
             credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
+        
         else:
-            # Baca dari file lokal untuk pengembangan di komputer
-            credentials = Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
+            # Baca dari file lokal untuk pengembangan
+            try:
+                st.info("🔄 Membaca kredensial dari file credentials.json...")
+                with open("credentials.json", "r", encoding="utf-8") as f:
+                    credentials_dict = json.load(f)
+                credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
+            except FileNotFoundError:
+                st.error("""
+                ❌ **File credentials.json TIDAK DITEMUKAN!**
+                
+                Saat menjalankan di komputer lokal:
+                - Pastikan file `credentials.json` ada di folder yang sama dengan program
+                - Nama file harus persis: `credentials.json`
+                
+                Saat menjalankan di Streamlit Cloud:
+                - Buka Settings → Secrets
+                - Salin SEMUA isi file credentials.json ke kolom secrets
+                """)
+                return None
         
         gc = gspread.authorize(credentials)
         sht = gc.open_by_url(SPREADSHEET_URL)
         worksheet = sht.sheet1
+        st.success("✅ Berhasil terhubung ke Google Sheet!")
         return worksheet
+        
     except Exception as e:
-        st.error(f"❌ Gagal terhubung ke Google Sheet: {e}")
+        st.error(f"❌ Gagal terhubung ke Google Sheet: {str(e)}")
+        st.info("💡 Pastikan:")
+        st.info("1. Service Account memiliki akses edit ke Google Sheet Anda")
+        st.info("2. URL Spreadsheet sudah benar")
         return None
 
 
