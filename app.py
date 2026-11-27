@@ -270,7 +270,12 @@ with tab2:
         st.markdown(f"### 📋 Daftar Transaksi — {len(df_filtered)} data ditemukan")
         
         tampil_kolom = ["tanggal", "in_out", "type_cost", "wbs_cost", "uraian", "rupiah", "keterangan"]
-        st.dataframe(df_filtered[tampil_kolom], width="stretch", hide_index=True)
+        ##---- st.dataframe(df_filtered[tampil_kolom], width="stretch", hide_index=True) ========
+        
+        df_styled = df.style.format({
+            "rupiah": "{:,.0f}"
+        })
+        st.dataframe(df_styled, use_container_width=True)
         
         # ---------------- GRAFIK ----------------
         st.markdown("---")
