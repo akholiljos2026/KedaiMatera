@@ -54,7 +54,7 @@ def connect_to_sheets():
                 credentials_dict["private_key"] = credentials_dict["private_key"].replace("\\n", "\n")
             
             credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
-            st.success("✅ Berhasil terhubung dari Streamlit Secrets!")
+            #---- st.success("✅ Berhasil terhubung dari Streamlit Secrets!")
 
         # Terhubung ke Google Sheet
         gc = gspread.authorize(credentials)
