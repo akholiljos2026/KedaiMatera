@@ -269,7 +269,7 @@ with tab2:
         st.markdown("---")
         st.markdown(f"### 📋 Daftar Transaksi — {len(df_filtered)} data ditemukan")
         
-        tampil_kolom = ["tanggal", "in_out", "type_cost", "wbs_cost", "uraian", format_rupiah("rupiah"), "keterangan"]
+        tampil_kolom = ["tanggal", "in_out", "type_cost", "wbs_cost", "uraian", "rupiah", "keterangan"]
         st.dataframe(df_filtered[tampil_kolom], width="stretch", hide_index=True)
         
         # ---------------- GRAFIK ----------------
