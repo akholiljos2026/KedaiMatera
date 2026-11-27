@@ -134,6 +134,10 @@ def add_logo_to_header(logo_path, width_scale=2.0):
         st.markdown("---")
         st.warning("⚠️ File `logo.png` tidak ditemukan di folder proyek — logo tidak ditampilkan")
 
+# ---- Ubah format kolom rupiah menjadi angka dengan pemisah ribuan
+def format_rupiah(angka):
+    return f"{angka:,.0f}"
+
 # ---------------------- HALAMAN UTAMA ----------------------
 st.set_page_config(page_title="Mitra Matera - Jurnal Kas", page_icon="💰", layout="wide")
 
@@ -265,7 +269,7 @@ with tab2:
         st.markdown("---")
         st.markdown(f"### 📋 Daftar Transaksi — {len(df_filtered)} data ditemukan")
         
-        tampil_kolom = ["tanggal", "in_out", "type_cost", "wbs_cost", "uraian", "rupiah", "keterangan"]
+        tampil_kolom = ["tanggal", "in_out", "type_cost", "wbs_cost", "uraian", format_rupiah("rupiah"), "keterangan"]
         st.dataframe(df_filtered[tampil_kolom], width="stretch", hide_index=True)
         
         # ---------------- GRAFIK ----------------
