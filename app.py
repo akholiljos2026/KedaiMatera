@@ -24,14 +24,14 @@ def connect_to_sheets():
 
         # 🔹 CARA 1: Baca dari file lokal (untuk komputer)
         try:
-            st.info("🔄 Membaca credentials.json...")
+            #----- st.info("🔄 Membaca credentials.json...")
             with open("credentials.json", "r", encoding="utf-8") as f:
                 credentials_dict = json.load(f)
             credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
-            st.success("✅ Berhasil terhubung dari credentials.json!")
+          ###----  st.success("✅ Berhasil terhubung dari credentials.json!")
 
         except FileNotFoundError:
-            st.info("ℹ️ File credentials.json tidak ditemukan — mencoba dari Streamlit Secrets...")
+            ### st.info("ℹ️ File credentials.json tidak ditemukan — mencoba dari Streamlit Secrets...")
 
             # 🔹 CARA 2: Baca dari Streamlit Secrets
             if "credentials" not in st.secrets:
