@@ -281,8 +281,7 @@ with tab2:
         st.subheader("📋 Daftar Transaksi")
         st.info(f"{len(df)} data ditemukan")
         ## st.dataframe(df, use_container_width=True, hide_index=True) ---- dirubah dibawah ini 
-        st.dataframe(df_filtered[tampil_kolom], width="stretch", hide_index=True)
-        
+        st.dataframe(df_filtered[tampil_kolom], use_container_width=True, hide_index=True)
 ####        st.markdown("---")
 ####        st.markdown(f"### 📋 Daftar Transaksi — {len(df_filtered)} data ditemukan")
         
