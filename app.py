@@ -18,11 +18,11 @@ SCOPES = [
 @st.cache_resource(show_spinner="Menghubungkan ke Google Sheet...")
 def connect_to_sheets():
     try:
+        import json
         credentials = None
 
         # Coba dari file lokal dulu
         try:
-            import json
             st.info("🔄 Membaca credentials.json...")
             with open("credentials.json", "r", encoding="utf-8") as f:
                 credentials_dict = json.load(f)
@@ -31,22 +31,39 @@ def connect_to_sheets():
         except FileNotFoundError:
             st.info("ℹ️ Tidak ditemukan — mencoba dari Streamlit Secrets...")
 
-        # Dari Streamlit Secrets
+        # Dari Streamlit Secrets — baca sebagai JSON string
         if credentials is None:
             st.info("🔄 Membaca dari Streamlit Secrets...")
-            credentials_dict = dict(st.secrets)
             
-            # ⚠️ PENTING: Ubah \\n menjadi \n agar kunci terbaca
-            if "private_key" in credentials_dict:
-                credentials_dict["private_key"] = credentials_dict["private_key"].replace("\\n", "\n")
+            # Gabungkan semua isi secrets jadi satu teks lalu parse
+            # Coba cari apakah ada kunci yang berisi JSON lengkap
+            json_text = None
             
-            # Cek semua kunci wajib
-            required_fields = ["type", "project_id", "private_key_id", "private_key", 
-                              "client_email", "client_id", "auth_uri", "token_uri",
-                              "auth_provider_x509_cert_url", "client_x509_cert_url"]
-            missing = [f for f in required_fields if f not in credentials_dict]
+            # Coba baca seluruh secrets sebagai satu teks gabungan
+            all_items = list(st.secrets.items())
+            if len(all_items) == 1 and all_items[0][0] == "":
+                json_text = all_items[0][1]
+            else:
+                # Gabungkan semua pasangan jadi format JSON
+                import re
+                items_text = []
+                for k, v in st.secrets.items():
+                    val = v.replace('"', '\\"') if isinstance(v, str) else v
+                    items_text.append(f'"{k}": "{val}"')
+                json_text = "{" + ", ".join(items_text) + "}"
+            
+            # Bersihkan dan parse JSON
+            json_text = re.sub(r'\\n', '\n', json_text)
+            credentials_dict = json.loads(json_text)
+            
+            # Cek kolom wajib
+            required = ["type", "project_id", "private_key_id", "private_key", 
+                       "client_email", "client_id", "auth_uri", "token_uri",
+                       "auth_provider_x509_cert_url", "client_x509_cert_url"]
+            missing = [f for f in required if f not in credentials_dict]
             if missing:
                 st.error(f"❌ Kolom belum lengkap: {', '.join(missing)}")
+                st.info("💡 Pastikan SEMUA baris dari credentials.json sudah disalin ke Secrets")
                 return None
             
             credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
@@ -60,6 +77,7 @@ def connect_to_sheets():
     except Exception as e:
         st.error(f"❌ Gagal terhubung: {str(e)}")
         return None
+
 
 # ---------------------- FUNGSI DATA ----------------------
 def load_transactions(worksheet):
