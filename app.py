@@ -18,31 +18,43 @@ SCOPES = [
 @st.cache_resource(show_spinner="Menghubungkan ke Google Sheet...")
 def connect_to_sheets():
     try:
-        # Coba dari file lokal dulu
+        credentials = None
+
+        # 🔹 Coba 1: Baca dari file lokal (untuk pengembangan di komputer)
         try:
             import json
             st.info("🔄 Membaca credentials.json...")
             with open("credentials.json", "r", encoding="utf-8") as f:
                 credentials_dict = json.load(f)
             credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
-            st.success("✅ Berhasil dari credentials.json!")
-            
+            st.success("✅ Berhasil terhubung dari credentials.json!")
         except FileNotFoundError:
-            import json
-            st.info("🔄 Membaca dari Streamlit Secrets...")
-            credentials_dict = json.loads(st.secrets["credentials_json"])
-            credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
-            st.success("✅ Berhasil dari Streamlit Secrets!")
+            st.info("ℹ️ File credentials.json tidak ditemukan — mencoba dari Streamlit Secrets...")
 
-               
+        # 🔹 Coba 2: Baca dari Streamlit Secrets
+        if credentials is None:
+            st.info("🔄 Membaca dari Streamlit Secrets...")
+            
+            # Ambil semua nilai dari secrets dan ubah ke dict
+            credentials_dict = dict(st.secrets)
+            
+            # Ubah karakter \n di private_key menjadi ganti baris asli
+            if "private_key" in credentials_dict:
+                credentials_dict["private_key"] = credentials_dict["private_key"].replace("\\n", "\n")
+            
+            credentials = Credentials.from_service_account_info(credentials_dict, scopes=SCOPES)
+            st.success("✅ Berhasil terhubung dari Streamlit Secrets!")
+
+        # 🔹 Terhubung ke Google Sheet
         gc = gspread.authorize(credentials)
         sht = gc.open_by_url(SPREADSHEET_URL)
         worksheet = sht.sheet1
         return worksheet
-        
+
     except Exception as e:
-        st.error(f"❌ Gagal terhubung: {e}")
+        st.error(f"❌ Gagal terhubung ke Google Sheet: {str(e)}")
         return None
+
 
 
 # ---------------------- FUNGSI DATA ----------------------
