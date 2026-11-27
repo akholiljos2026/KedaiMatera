@@ -279,21 +279,8 @@ with tab2:
 
         # 3. Tampilkan tabel — sembunyikan indeks bawaan
         st.subheader("📋 Daftar Transaksi")
-        st.info(f"{len(df)} data ditemukan")
-        ## st.dataframe(df, use_container_width=True, hide_index=True) ---- dirubah dibawah ini 
+        st.info(f"{len(df_filtered)} data ditemukan")
         st.dataframe(df_filtered[tampil_kolom], use_container_width=True, hide_index=True)
-####        st.markdown("---")
-####        st.markdown(f"### 📋 Daftar Transaksi — {len(df_filtered)} data ditemukan")
-        
-####        tampil_kolom = ["tanggal", "in_out", "type_cost", "wbs_cost", "uraian", "rupiah", "keterangan"]
-        
-####        ##---- st.dataframe(df_filtered[tampil_kolom], width="stretch", hide_index=True) ========
-####        ## diganti rupiah ditempilkan dengan pecahan ribuan ======
-        
-####        df_styled = df.style.format({
-####            "rupiah": "{:,.0f}"
-####        })
-####        st.dataframe(df_styled, use_container_width=True)
         
         # ---------------- GRAFIK ----------------
         st.markdown("---")
